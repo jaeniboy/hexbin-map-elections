@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+	<title>Gemeinderatswahlen Baden-Württemberg 2014</title>
+	<meta charset="utf-8"></meta>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<script src="https://d3js.org/d3-hexbin.v0.2.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css">
+
+	<style>
+	
+		path {
+			stroke: #cdcdcd;
+		}
+		
+		#map-container {
+			width: 70%;
+			margin-left: 15%;
+		}
+
+	</style>
+
+
+	<div class="row" id="map-container">
+		<h1>Gemeinderatswahlen 2014 Baden-Württemberg</h1>
+		<p>Wo haben Parteien und Wählervereinigungen ihre Hochburgen? (Kräftigste Farbe = bestes Wahlergebnis)</p>
+	
+	</div>
+	<script>
+
+	var colors = "tan";
+
+	var parties = [
+		{"name": "CDU", "color": "black", "selector": "partei_cdu"},
+		{"name": "SPD", "color": "red", "selector": "partei_spd"},
+		{"name": "Grüne", "color": "green", "selector": "partei_gruene"},
+		{"name": "FDP", "color": "gold", "selector": "partei_fdp"},
+		{"name": "Linke", "color": "purple", "selector": "partei_linke"},
+		{"name": "AfD", "color": "steelblue", "selector": "partei_afd"},
+		{"name": "Wählervereinigungen", "color": "tan", "selector": "wv_allg"},
+		{"name": "Nichtwähler","color": "orange", "selector":"nw"}
+	]
+
+
+
+	d3.queue()
+		.defer(d3.csv,"./data/gemeinderatswahlen2014_geocode.csv")
+		.await(drawHexbin)
+
+
+	function drawHexbin(error,data) {
+		
+		for (var i=0;i<parties.length;i++) {
+			drawElectionResults(parties[i]);
+		}
+
+		function drawElectionResults(obj) {
+
+			var container = d3.select("#map-container")
+				.append("div")
+				.attr("class","col-sm-4")
+				.attr("id",obj.selector)
+				
+			container
+				.append("h3")
+				.text(obj.name)
+				
+			var svg = container
+				.append("svg")
+
+			var width = $("#"+obj.selector).width();
+			var height = width * 1.1;
+				
+			var hexbin = d3.hexbin()
+				.radius(height/30)
+				.x(function(d){return projection([d.lon,d.lat])[0]})
+				.y(function(d){return projection([d.lon,d.lat])[1]});
+				
+			var projection = d3.geoMercator()
+				.center([0,48.66775])
+				.rotate([-9.041169,0])
+				.scale(height * 15) 
+				.translate([width / 2, height / 2])
+
+			svg
+				.attr("height",height)
+				.attr("width",width)
+
+			var hexbinData = hexbin(data);
+			var results = [];
+
+			hexbinData.map(function(c) { // pro Hexagon Stimmen zusammenzählen, ins Verhältnis setzen und Array hinzufügen
+
+				var sum_stimme = 0;
+				var sum_partei = 0;
+				var sum_nw = 0;
+				var sum_wb = 0;
+				c.map(function(e){
+					if(/^\d+$/.test(e.wahlberechtigte) && /^\d+$/.test(e.waehler)) { //wenn Zahlenwerte dann Nichtwähler berechnen
+						var w = parseInt(e.waehler);
+						var wb = parseInt(e.wahlberechtigte);
+						var nw = wb - w
+						sum_nw = sum_nw + nw;
+						sum_wb = sum_wb + wb;
+					};
+					if(/^\d+$/.test(e.gueltig)){sum_stimme = sum_stimme + parseInt(e.gueltig)};
+					if(/^\d+$/.test(e[obj.selector])){sum_partei = sum_partei + parseInt(e[obj.selector])};
+				})
+				var result = (obj.selector != "nw") ? sum_partei/sum_stimme : sum_nw/sum_wb
+				c["result"] = result;
+				results.push(result);
+
+			})
+
+			var max = d3.max(results) // Farbskala berechnen
+			var color = d3.scaleSequential(d3.interpolateLab("white", obj.color))
+				.domain([0,max])
+				.clamp(true);
+
+			var colorGroup = svg // Hexagone zeichnen
+				.append("g")
+				.attr("class","color-layer-group")
+				.selectAll(".color-layer")
+				.data(hexbinData)
+			  	.enter().append("path")
+				.attr("class","color-layer")
+			  	.attr("d", function(d) {return "M" + d.x + "," + d.y + hexbin.hexagon();})
+				.attr("fill", function(d) {
+					return color(d.result)
+				})
+		}
+	}
+
+
+
+	</script>
+
+

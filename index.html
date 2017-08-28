@@ -6,27 +6,81 @@
 	<script src="https://d3js.org/d3.v4.min.js"></script>
 	<script src="https://d3js.org/d3-hexbin.v0.2.min.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-	<link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css">
-
+<!-- 	<link rel="stylesheet" type="text/css" href="./css/bootstrap.min.css"> -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
 	<style>
 	
+		body {
+			font-family: sans-serif;
+		}
+	
 		path {
-			stroke: #cdcdcd;
+			stroke: #b3b3b3;
 		}
 		
-		#map-container {
+		.content {
 			width: 70%;
 			margin-left: 15%;
 		}
+		
+		.col-sm-4 {
+			float:left;
+			width: 25%;
+		}
+				
+		/* Large Devices, Wide Screens */
+		@media only screen and (max-width : 1200px) {
+			.col-sm-4 {
+					width: 25%;
+			}
+		}
+
+		/* Medium Devices, Desktops */
+		@media only screen and (max-width : 992px) {
+			.col-sm-4 {
+					width: 33%;
+			}
+		}
+
+		/* Small Devices, Tablets */
+		@media only screen and (max-width : 768px) {
+			.col-sm-4 {
+					width: 50%;
+			}
+			
+			.content {
+				width: 80%;
+				margin-left: 10%;
+			}
+		}
+
+		/* Extra Small Devices, Phones */ 
+		@media only screen and (max-width : 480px) {
+			.col-sm-4 {
+					width: 100%;
+			}
+			
+			.content {
+				width: 100%;
+				margin-left: 0%;
+			}
+			
+		}
+
+		/* Custom, iPhone Retina */ 
+		@media only screen and (max-width : 320px) {
+
+		}
 
 	</style>
-
-
-	<div class="row" id="map-container">
-		<h1>Gemeinderatswahlen 2014 Baden-Württemberg</h1>
-		<p>Wo haben Parteien und Wählervereinigungen ihre Hochburgen? (Kräftigste Farbe = bestes Wahlergebnis)</p>
 	
+	<div class="content">
+		<h1>Ge&shy;mein&shy;de&shy;rats&shy;wah&shy;len 2014 Baden-Württemberg</h1>
+		<p>Wo haben Parteien und Wählervereinigungen ihre Hochburgen? (Kräftigste Farbe = bestes Wahlergebnis)</p>
+		<div class="row" id="map-container"></div>
 	</div>
+	
 	<script>
 
 	var colors = "tan";
@@ -38,18 +92,22 @@
 		{"name": "FDP", "color": "gold", "selector": "partei_fdp"},
 		{"name": "Linke", "color": "purple", "selector": "partei_linke"},
 		{"name": "AfD", "color": "steelblue", "selector": "partei_afd"},
-		{"name": "Wählervereinigungen", "color": "tan", "selector": "wv_allg"},
-		{"name": "Nichtwähler","color": "orange", "selector":"nw"}
+		{"name": "Wählerverein.", "color": "maroon", "selector": "wv_allg"},
+		{"name": "Nichtwähler","color": "DarkSlateGray", "selector":"nw"}
 	]
-
-
 
 	d3.queue()
 		.defer(d3.csv,"./data/gemeinderatswahlen2014_geocode.csv")
 		.await(drawHexbin)
 
-
+	var mapdata = [];
+	var error = null;
+	
 	function drawHexbin(error,data) {
+		
+		mapdata = data;
+	
+		$("#map-container div").remove();
 		
 		for (var i=0;i<parties.length;i++) {
 			drawElectionResults(parties[i]);
@@ -131,6 +189,10 @@
 				})
 		}
 	}
+	
+	$( window ).resize(function() { // neu laden bei veränderter Fenstergröße
+		drawHexbin(error,mapdata);
+	});
 
 
 
